@@ -2,7 +2,6 @@
 
 import argparse
 import requests
-import json
 import pickle
 import os
 
@@ -26,7 +25,53 @@ def cli():
             pickle.dump(json_response, pickle_file)
 
     print("Got {} assets in total".format(len(json_response["results"])))
-    print(list(filter_assets(json_response, "Erntemengen - KW"))[0])
+    parsed_poll_data = dict()
+    for asset in filter_assets(json_response, "Erntemengen - KW"):
+        week = parse_week_from(asset)
+        if week not in parsed_poll_data:
+            parsed_poll_data[week] = dict()
+        week_dict = parsed_poll_data[week]
+
+        location = parse_location_from(asset)
+        if location in week_dict:
+            raise RuntimeError("Got the same location ({}) twice for the same week ({}):\n{}".format(location, week, week_dict))
+        submissions = download_submissions_from(asset, args.api_token)
+        week_dict[location] = parse_submissions(submissions)
+        print(week_dict)
+
+def download_submissions_from(asset, api_token):
+    get_submissions_url = asset['data']
+    print("\tRequesting submission data {}".format(get_submissions_url))
+    response = requests.get(get_submissions_url, headers={'Authorization': "Token " + api_token})
+    response.raise_for_status()
+    json_response = response.json()
+    return json_response
+
+def parse_submissions(assets_submissions):
+    data = dict()
+    data['submission_count'] = assets_submissions['count']
+    data['vegetable_amounts'] = dict() # key: veggie type, value: list of submitted amount-wishes (as a number from -2 to 2). E.g. 'Zucchini': ['too_much_half','okay'] (two submissions)
+    for submission in assets_submissions['results']:
+        for key, value in submission.items():
+            if 'group_rr' in key: # ignore data like "submission time", etc., only look at radio button results
+                veggie_type = parse_veggie_type(key)
+                if veggie_type not in data['vegetable_amounts']:
+                    data['vegetable_amounts'][veggie_type] = []
+                data['vegetable_amounts'][veggie_type].append(value)
+    return data
+
+def parse_veggie_type(radio_button_field_name):
+    veggie_type_raw = key.split('/')[1]
+    if veggie_type_raw == "M_hren":
+        return "Möhren"
+    else:
+        return veggie_type_raw
+
+def parse_location_from(asset):
+    return asset['name'].split("Erntemengen - KW")[1].split(", ")[1]
+
+def parse_week_from(asset):
+    return asset['name'].split("Erntemengen - ")[1].split(",")[0]
 
 def download_assets(kpi_url: str, api_token: str):
     get_assets_url = "https://{}/api/v2/assets.json".format(kpi_url)
