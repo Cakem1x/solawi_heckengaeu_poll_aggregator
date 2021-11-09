@@ -10,7 +10,7 @@ def cli():
     parser = argparse.ArgumentParser(description="Aggregates poll data from kobo toolbox via API")
     parser.add_argument('api_token', type=str,
                         help="Authenticate via api token. You can find it on your profile page.")
-    parser.add_argument('--kpi-url', default="https://kf.kobotoolbox.org/", type=str,
+    parser.add_argument('--kpi-url', default="kf.kobotoolbox.org", type=str,
                         help="Kpi url used to retrieve data from.")
     args = parser.parse_args()
 
@@ -22,16 +22,14 @@ def cli():
     else:
         json_response = download_assets(args.kpi_url, args.api_token)
         with open(pickle_path, "wb") as pickle_file:
-            pickle.dump(pickle_file, json_response)
+            pickle.dump(json_response, pickle_file)
     print(len(json_response["results"]))
-    #print(polls_received)
-    #if len(polls_received) == 0:
-    #    print("Error: no assets received.")
-    #    return
-    #print("Got {} assets".len(assets_received))
+    print(json_response["results"][0])
 
 def download_assets(kpi_url: str, api_token: str):
-    response = requests.get("https://{}/api/v2/assets.json".format(kpi_url), headers={'Authorization': "Token " + api_token})
+    get_assets_url = "https://{}/api/v2/assets.json".format(kpi_url)
+    print("Requesting assets from {}".format(get_assets_url))
+    response = requests.get(get_assets_url, headers={'Authorization': "Token " + api_token})
     response.raise_for_status()
     json_response = response.json()
     return json_response
