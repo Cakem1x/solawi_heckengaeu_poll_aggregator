@@ -61,9 +61,23 @@ def parse_submissions(assets_submissions):
     return data
 
 def parse_veggie_type(radio_button_field_name):
-    veggie_type_raw = key.split('/')[1]
-    if veggie_type_raw == "M_hren":
+    veggie_type_raw = radio_button_field_name.split('/')[1]
+    if veggie_type_raw == 'M_hren':
         return "Möhren"
+    elif veggie_type_raw == 'Fr_hlingszwiebeln_Bund':
+        return "Frühlingszwiebeln"
+    elif veggie_type_raw == 'Aubergine_001':
+        return "Aubergine"
+    elif veggie_type_raw == 'K_rbis':
+        return "Kürbis"
+    elif veggie_type_raw == 'Gurkenst_cke':
+        return "Gurke"
+    elif veggie_type_raw == 'Wei_kohl':
+        return "Weißkohl"
+    elif veggie_type_raw in ['Brokkoli_klein', 'Brokkoli_Blumenkohl']:
+        return "Brokkoli"
+    elif veggie_type_raw in ['Paprika_rot_spitz', 'Paprika_klein_orange', 'Paprika_klein', 'Paprika_gro']:
+        return "Paprika"
     else:
         return veggie_type_raw
 
