@@ -4,6 +4,8 @@ import argparse
 import requests
 import pickle
 import os
+import csv
+from statistics import median
 
 def cli():
     parser = argparse.ArgumentParser(description="Aggregates poll data from kobo toolbox via API")
@@ -24,7 +26,50 @@ def cli():
         with open(pickle_path, "wb") as pickle_file:
             pickle.dump(json_response, pickle_file)
 
-    print("Got {} assets in total".format(len(json_response["results"])))
+    # TODO: rm pickle stuff, only temporary, for quicker dev
+    parsed_poll_data = None
+    pickle_path = "poll_data.pkl"
+    if os.path.isfile(pickle_path):
+        with open(pickle_path, "rb") as pickle_file:
+            parsed_poll_data = pickle.load(pickle_file)
+    else:
+        parsed_poll_data = parse_poll_data(json_response, args.api_token)
+        with open(pickle_path, "wb") as pickle_file:
+            pickle.dump(parsed_poll_data, pickle_file)
+
+    all_veggie_types = set()
+    for week_dict in parsed_poll_data.values():
+        for submissions_dict in week_dict.values():
+            all_veggie_types.update(submissions_dict['vegetable_amounts'].keys())
+    print(all_veggie_types)
+
+    with open('results.csv', 'w', newline='') as csvfile:
+        data_list = []
+        for week, week_dict in parsed_poll_data.items():
+            for location, submissions_dict in week_dict.items():
+                data_dict = {'KW + Ort': "{}, {}".format(week, location)}
+                data_dict.update(median_vegetable_amount(submissions_dict['vegetable_amounts']))
+                data_dict.update({'#Abgestimmt': submissions_dict['submission_count']})
+                data_list.append(data_dict)
+        csv_writer = csv.DictWriter(csvfile, fieldnames=['KW + Ort', '#Abgestimmt'] + list(all_veggie_types))
+        csv_writer.writeheader()
+        data_list.reverse()
+        for data_dict in data_list:
+            csv_writer.writerow(data_dict)
+
+
+def median_vegetable_amount(submissions_veggie_amounts_dict):
+    median_veggie_dict = dict()
+    string_amount_to_numeric_dict = {'too_little_double': -2, 'slightly_too_little': -1, 'okay': 0, 'slightly_too_much': 1, 'too_much_half': 2}
+    numeric_to_string_amount_dict = {-2: 'too_little_double', -1.5: 'too_little', -1: 'slightly_too_little', -0.5: 'very_slightly_too_little', 0: 'okay', 0.5: 'very_slightly_too_much', 1: 'slightly_too_much', 1.5: 'too_much', 2: 'too_much_half'}
+
+    for veggie_type, submissions_list in submissions_veggie_amounts_dict.items():
+        submission_list_numeric = [string_amount_to_numeric_dict[amount_string] for amount_string in submissions_list if amount_string != "dont_like"]
+        median_numeric = median(submission_list_numeric) if len(submission_list_numeric) > 0 else 0
+        median_veggie_dict[veggie_type] = numeric_to_string_amount_dict[median_numeric]
+    return median_veggie_dict
+
+def parse_poll_data(json_response, api_token):
     parsed_poll_data = dict()
     for asset in filter_assets(json_response, "Erntemengen - KW"):
         week = parse_week_from(asset)
@@ -35,9 +80,9 @@ def cli():
         location = parse_location_from(asset)
         if location in week_dict:
             raise RuntimeError("Got the same location ({}) twice for the same week ({}):\n{}".format(location, week, week_dict))
-        submissions = download_submissions_from(asset, args.api_token)
+        submissions = download_submissions_from(asset, api_token)
         week_dict[location] = parse_submissions(submissions)
-        print(week_dict)
+    return parsed_poll_data
 
 def download_submissions_from(asset, api_token):
     get_submissions_url = asset['data']
