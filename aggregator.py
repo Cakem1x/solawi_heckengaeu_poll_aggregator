@@ -41,9 +41,8 @@ def cli():
     for week_dict in parsed_poll_data.values():
         for submissions_dict in week_dict.values():
             all_veggie_types.update(submissions_dict['vegetable_amounts'].keys())
-    print(all_veggie_types)
 
-    with open('results.csv', 'w', newline='') as csvfile:
+    with open('results_per_location.csv', 'w', newline='') as csvfile:
         data_list = []
         for week, week_dict in parsed_poll_data.items():
             for location, submissions_dict in week_dict.items():
@@ -52,6 +51,26 @@ def cli():
                 data_dict.update({'#Abgestimmt': submissions_dict['submission_count']})
                 data_list.append(data_dict)
         csv_writer = csv.DictWriter(csvfile, fieldnames=['KW + Ort', '#Abgestimmt'] + list(all_veggie_types))
+        csv_writer.writeheader()
+        data_list.reverse()
+        for data_dict in data_list:
+            csv_writer.writerow(data_dict)
+
+    with open('results_merged_locations.csv', 'w', newline='') as csvfile:
+        data_list = []
+        for week, week_dict in parsed_poll_data.items():
+            merged_data_dict = {'KW': "{}".format(week),
+                                '#Abgestimmt': 0}
+            vegetable_amounts_dict = dict()
+            for location, submissions_dict in week_dict.items():
+                merged_data_dict['#Abgestimmt'] += submissions_dict['submission_count']
+                for veggie_type, submissions in submissions_dict['vegetable_amounts'].items():
+                    if veggie_type not in vegetable_amounts_dict.keys():
+                        vegetable_amounts_dict[veggie_type] = []
+                    vegetable_amounts_dict[veggie_type] = vegetable_amounts_dict[veggie_type] + submissions
+            merged_data_dict.update(median_vegetable_amount(vegetable_amounts_dict))
+            data_list.append(merged_data_dict)
+        csv_writer = csv.DictWriter(csvfile, fieldnames=['KW', '#Abgestimmt'] + list(all_veggie_types))
         csv_writer.writeheader()
         data_list.reverse()
         for data_dict in data_list:
