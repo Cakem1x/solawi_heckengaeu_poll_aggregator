@@ -38,12 +38,16 @@ def download_assets(kpi_url: str, api_token: str):
 
 def filter_assets(json_response, asset_name_infix):
     for asset in json_response['results']:
-        if not asset['has_deployment']: # only parse data from polls that are complete
-            print("Filtered asset {} because it never was deployed.".format(asset['name']))
+        if not asset['has_deployment']:
+            print("x Skip - was never deployed '{}'".format(asset['name']))
             continue
         if asset_name_infix not in asset['name']:
-            print("Filtered asset {} due to name mismatch (does not contain '{}').".format(asset['name'], asset_name_infix))
+            print("x Skip - mismatch           '{}' (does not contain '{}')".format(asset['name'], asset_name_infix))
             continue
+        if "BETA" in asset['name']:
+            print("x Skip - beta poll          '{}'".format(asset['name']))
+            continue
+        print("✓ Got asset                 '{}'".format(asset['name']))
         yield asset
 
 if __name__ == "__main__":
