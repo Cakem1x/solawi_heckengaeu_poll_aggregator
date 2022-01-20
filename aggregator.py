@@ -115,7 +115,9 @@ def parse_submissions(assets_submissions):
     data = dict()
     data['submission_count'] = assets_submissions['count']
     data['vegetable_amounts'] = dict() # key: veggie type, value: list of submitted amount-wishes (as a number from -2 to 2). E.g. 'Zucchini': ['too_much_half','okay'] (two submissions)
+    data['vegetable_amounts']['Gesamtmenge'] = []
     for submission in assets_submissions['results']:
+        data['vegetable_amounts']['Gesamtmenge'].append(submission['Wie_war_die_Gesamtmenge_im_Ernteanteil'])
         for key, value in submission.items():
             if 'group_rr' in key: # ignore data like "submission time", etc., only look at radio button results
                 veggie_type = parse_veggie_type(key)
