@@ -130,7 +130,7 @@ def parse_veggie_type(radio_button_field_name):
     veggie_type_raw = radio_button_field_name.split('/')[1]
     if veggie_type_raw == 'M_hren':
         return "Möhren"
-    elif veggie_type_raw == 'Fr_hlingszwiebeln_Bund':
+    elif veggie_type_raw in ['Fr_hlingszwiebeln_Bund', 'Fr_hlingszwiebel_Bund']:
         return "Frühlingszwiebeln"
     elif veggie_type_raw == 'Aubergine_001':
         return "Aubergine"
